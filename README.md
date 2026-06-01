@@ -71,7 +71,7 @@ vllm_enforce_eager: true
 base_max_tokens: 16384
 base_max_model_len: 32768
 prompt_style: cot
-temperature: 0.6
+temperature: 0.7
 seed: 42
 model_postprocess: false
 ```
@@ -119,15 +119,15 @@ PY
 
 The repository also keeps a secondary tuned route. It is not the default
 pipeline. To run it, set the adapter locations and call
-`pipeline="legal_hybrid_1027"`.
+`pipeline="tuned_hybrid"`.
 
 Adapter variables:
 
 ```bash
-export CSE151B_SELECTOR_ALL_REPAIR_MODEL=alradulescu/cse151b-repair_trace_lora_all_e3_r64
-export CSE151B_SELECTOR_FREEFORM_REPAIR_MODEL=alradulescu/cse151b-repair_trace_lora_freeform_e3_r64
-export CSE151B_MCQ_REPAIR_MODEL=alradulescu/cse151b-repair_trace_lora_mcq_e5_lr5e5_r64
-export CSE151B_FREEFORM_STRUCTURED_MODEL=alradulescu/cse151b-repair_trace_lora_freeform_structured_e8_lr5e5_r64
+export CSE151B_SELECTOR_ALL_REPAIR_MODEL=<hf-adapter-repo-for-selector-all>
+export CSE151B_SELECTOR_FREEFORM_REPAIR_MODEL=<hf-adapter-repo-for-selector-freeform>
+export CSE151B_MCQ_REPAIR_MODEL=<hf-adapter-repo-for-mcq>
+export CSE151B_FREEFORM_STRUCTURED_MODEL=<hf-adapter-repo-for-freeform-structured>
 ```
 
 Pass names:
@@ -148,7 +148,7 @@ run_inference(
     data_path="kaggle_data/private.jsonl",
     output_csv="submission_tuned.csv",
     work_dir="results/tuned_route",
-    pipeline="legal_hybrid_1027",
+    pipeline="tuned_hybrid",
     hybrid_final_policy="full",
 )
 ```

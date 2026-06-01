@@ -667,7 +667,7 @@ def _validate_competition_model(model: str) -> None:
     )
 
 
-LEGAL_HYBRID_PRESET = "legal_hybrid_1027"
+TUNED_HYBRID_PRESET = "tuned_hybrid"
 RAW_DUAL_CHOOSE_PRESET = "raw_dual_choose"
 DEFAULT_HYBRID_ADAPTERS = {
     "selector_all_repair": None,
@@ -725,7 +725,7 @@ def _required_optional_model(value: str | None, env_name: str) -> str:
         return value
     raise ValueError(
         f"{env_name} or the matching run_inference() argument is required "
-        f"when pipeline={LEGAL_HYBRID_PRESET!r} is selected."
+        f"when pipeline={TUNED_HYBRID_PRESET!r} is selected."
     )
 
 
@@ -839,7 +839,7 @@ def _write_submission_csv(output_csv: Path, items: list[dict], records: list[dic
     return hashlib.sha256(output_csv.read_bytes()).hexdigest()
 
 
-def _run_legal_hybrid_1027_pipeline(
+def _run_tuned_hybrid_pipeline(
     *,
     data_path: Path,
     output_csv: Path,
@@ -977,7 +977,7 @@ def _run_legal_hybrid_1027_pipeline(
         _write_jsonl_records(final_jsonl, final_records)
         sha256 = _write_submission_csv(output_csv, items, final_records)
         summary = {
-            "pipeline": LEGAL_HYBRID_PRESET,
+            "pipeline": TUNED_HYBRID_PRESET,
             "hybrid_final_policy": hybrid_final_policy,
             "submission_csv": str(output_csv),
             "results_jsonl": str(final_jsonl),
@@ -1088,7 +1088,7 @@ def _run_legal_hybrid_1027_pipeline(
     sha256 = _write_submission_csv(output_csv, items, final_records)
 
     summary = {
-        "pipeline": LEGAL_HYBRID_PRESET,
+        "pipeline": TUNED_HYBRID_PRESET,
         "hybrid_final_policy": hybrid_final_policy,
         "submission_csv": str(output_csv),
         "results_jsonl": str(final_jsonl),
@@ -1161,7 +1161,7 @@ def run_inference(
     base_max_tokens: int = 16384,
     base_max_model_len: int = 32768,
     prompt_style: str = "cot",
-    temperature: float = 0.6,
+    temperature: float = 0.7,
     seed: int = 42,
     disable_thinking: bool = False,
     batch_size: int = 4,
@@ -1316,9 +1316,9 @@ def run_inference(
                 "qwen_generation_t0.6_raw16k",
                 "qwen_generation_t0.8_raw16k",
                 "qwen_model_only_choose_between_qwen_candidates",
-                "csv_packaging_no_solver_no_external_tool_no_private_override",
+                "csv_packaging",
             ],
-            "compliance_mode": "legal_qwen_model_only_no_tools_no_python_answer_solvers",
+            "inference_mode": "qwen_model_only",
             "public_smoke_reference": "optional public smoke configuration",
             "candidate_summaries": {
                 "temp06": t06_summary,
@@ -1330,8 +1330,8 @@ def run_inference(
         print(json.dumps(summary, indent=2), flush=True)
         return summary
 
-    if pipeline == LEGAL_HYBRID_PRESET:
-        return _run_legal_hybrid_1027_pipeline(
+    if pipeline == TUNED_HYBRID_PRESET:
+        return _run_tuned_hybrid_pipeline(
             data_path=Path(data_path),
             output_csv=Path(output_csv),
             work_dir=Path(work_dir),
@@ -1386,8 +1386,8 @@ def run_inference(
         )
     if pipeline != "single_model":
         raise ValueError(
-            f"Unknown pipeline {pipeline!r}. Use {LEGAL_HYBRID_PRESET!r} "
-            f"or {RAW_DUAL_CHOOSE_PRESET!r} for optional legal experiments, "
+            f"Unknown pipeline {pipeline!r}. Use {TUNED_HYBRID_PRESET!r} "
+            f"or {RAW_DUAL_CHOOSE_PRESET!r} for optional experiments, "
             "or 'single_model' for the raw one-model path."
         )
 
@@ -1598,10 +1598,10 @@ def run_inference(
                     if model_postprocess
                     else "model_postprocess_disabled"
                 ),
-                "safe_trim_and_latex_wrapper_cleanup_only",
-                "csv_packaging_no_solver_no_external_tool_no_private_override",
+                "trim_and_latex_wrapper_cleanup_only",
+                "csv_packaging",
             ],
-            "compliance_mode": "legal_qwen_model_only_no_tools_no_python_answer_solvers",
+            "inference_mode": "qwen_model_only",
             "base_max_tokens": base_max_tokens,
             "base_max_model_len": base_max_model_len,
             "prompt_style": prompt_style,
@@ -1618,7 +1618,7 @@ def run_inference(
             "postprocess_stage_paths": postprocess_stage_paths,
             "postprocessing": (
                 "Allowed-model generation passes plus response-string-only "
-                "trim/LaTeX wrapper cleanup; no solver/tool/private override."
+                "trim/LaTeX wrapper cleanup."
             ),
         }
     )
@@ -1654,7 +1654,7 @@ def main():
                         help="vLLM max_num_batched_tokens engine setting.")
     parser.add_argument("--vllm-enforce-eager", action="store_true",
                         help="Disable vLLM torch.compile/CUDA graph capture for more reliable reproduction.")
-    parser.add_argument("--temperature",    type=float, default=0.6)
+    parser.add_argument("--temperature",    type=float, default=0.7)
     parser.add_argument("--batch-size",     type=int, default=4,
                         help="Batch size for Transformers backend")
     parser.add_argument("--no-score", action="store_true",
