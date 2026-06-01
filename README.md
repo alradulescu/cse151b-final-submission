@@ -116,42 +116,42 @@ run_inference(
 PY
 ```
 
-## Secondary Tuned Route
+## Backup Multipass Route
 
-The repository also keeps a secondary tuned route. It is not the default
-pipeline. To run it, set the adapter locations and call
-`pipeline="tuned_hybrid"`.
-
-Adapter variables:
-
-```bash
-export CSE151B_SELECTOR_ALL_REPAIR_MODEL=<hf-adapter-repo-for-selector-all>
-export CSE151B_SELECTOR_FREEFORM_REPAIR_MODEL=<hf-adapter-repo-for-selector-freeform>
-export CSE151B_MCQ_REPAIR_MODEL=<hf-adapter-repo-for-mcq>
-export CSE151B_FREEFORM_STRUCTURED_MODEL=<hf-adapter-repo-for-freeform-structured>
-```
-
-Pass names:
+The backup route now lives on the public branch:
 
 ```text
-selector_all_repair
-selector_freeform_repair
-mcq_repair
-freeform_structured
+base-multipass-route
 ```
 
-Example:
+This backup does not require adapter weights. It uses only the required base
+model, `Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside
+one `run_inference()` call.
 
-```python
-from run_inference import run_inference
+To inspect or run that branch:
 
-run_inference(
-    data_path="kaggle_data/private.jsonl",
-    output_csv="submission_tuned.csv",
-    work_dir="results/tuned_route",
-    pipeline="tuned_hybrid",
-    hybrid_final_policy="full",
-)
+```bash
+git fetch origin base-multipass-route
+git checkout base-multipass-route
 ```
 
-For the lighter selector-only variant, use `hybrid_final_policy="selector"`.
+Then run:
+
+```bash
+python3 scripts/run_base_multipass_route.py \
+  --data kaggle_data/private.jsonl \
+  --output submission.csv \
+  --work-dir results/base_multipass_route
+```
+
+The `base-multipass-route` branch performs:
+
+1. split rows into multiple-choice and free-form subsets;
+2. generate multiple-choice answers with compact boxed prompting plus a Qwen
+   structured boxed pass;
+3. generate free-form answers with 16k CoT prompting plus a Qwen solve boxed
+   pass;
+4. merge outputs by fixed row type and write the final `id,response` CSV.
+
+The non-model code only writes temporary JSONL/CSV files, performs fixed
+row-type routing, trims response strings, and repairs simple LaTeX wrappers.
