@@ -669,6 +669,7 @@ def _validate_competition_model(model: str) -> None:
 
 TUNED_HYBRID_PRESET = "tuned_hybrid"
 RAW_DUAL_CHOOSE_PRESET = "raw_dual_choose"
+BASE_MULTIPASS_ROUTE_PRESET = "base_multipass_route"
 DEFAULT_HYBRID_ADAPTERS = {
     "selector_all_repair": None,
     "selector_freeform_repair": None,
@@ -837,6 +838,190 @@ def _write_submission_csv(output_csv: Path, items: list[dict], records: list[dic
             row = by_id[int(item["id"])]
             writer.writerow([row["id"], row.get("response", "")])
     return hashlib.sha256(output_csv.read_bytes()).hexdigest()
+
+
+def _write_subset_jsonl(path: Path, rows: list[dict]) -> None:
+    _write_jsonl_records(path, rows)
+
+
+def _resolve_repo_path(path: str | Path, root: Path) -> Path:
+    resolved = Path(path)
+    return resolved if resolved.is_absolute() else root / resolved
+
+
+def _run_base_multipass_route_pipeline(
+    *,
+    data_path: Path,
+    output_csv: Path,
+    work_dir: Path,
+    model: str,
+    backend: str,
+    gpu_id: str | None,
+    seed: int,
+    batch_size: int,
+    vllm_batch_size: int,
+    vllm_enforce_eager: bool,
+    repair_batch_size: int,
+    resume: bool,
+    reuse_existing: bool,
+) -> dict:
+    """Regenerate the compact-MCQ plus solve-freeform route in one call.
+
+    This is a model-only multipass route. It generates the compact MCQ pass and
+    the free-form solve pass from the provided input rows inside this function,
+    then merges them by the fixed row schema.
+    """
+    root = Path(__file__).resolve().parent
+    data_path = _resolve_repo_path(data_path, root)
+    output_csv = _resolve_repo_path(output_csv, root)
+    work_dir = _resolve_repo_path(work_dir, root)
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    _validate_competition_model(model)
+    items = _load_jsonl_records(data_path)
+    mcq_items = [item for item in items if bool(item.get("options"))]
+    freeform_items = [item for item in items if not bool(item.get("options"))]
+
+    mcq_data = work_dir / "00_mcq_rows.jsonl"
+    freeform_data = work_dir / "00_freeform_rows.jsonl"
+    _write_subset_jsonl(mcq_data, mcq_items)
+    _write_subset_jsonl(freeform_data, freeform_items)
+
+    stage_summaries: dict[str, dict] = {}
+    stage_outputs: dict[str, str] = {}
+
+    if mcq_items:
+        mcq_dir = work_dir / "01_compact_mcq_structured"
+        mcq_summary = run_inference(
+            data_path=mcq_data,
+            output_csv=mcq_dir / "compact_mcq.csv",
+            work_dir=mcq_dir,
+            model=model,
+            repair_model=model,
+            backend=backend,
+            gpu_id=gpu_id,
+            base_max_tokens=16384,
+            base_max_model_len=32768,
+            prompt_style="compact_boxed",
+            temperature=0.6,
+            seed=seed,
+            disable_thinking=False,
+            batch_size=batch_size,
+            vllm_batch_size=vllm_batch_size,
+            vllm_enforce_eager=vllm_enforce_eager,
+            self_consistency_n=1,
+            model_postprocess=True,
+            legal_postprocess_modes="structured",
+            repair_max_tokens=512,
+            repair_max_model_len=8192,
+            repair_base_tail_chars=2400,
+            repair_disable_thinking=True,
+            resume=resume,
+            reuse_existing=reuse_existing,
+            pipeline="single_model",
+            repair_batch_size=repair_batch_size,
+        )
+        stage_summaries["compact_mcq_structured"] = mcq_summary
+        stage_outputs["compact_mcq_structured"] = mcq_summary["results_jsonl"]
+        mcq_records = _load_jsonl_records(Path(mcq_summary["results_jsonl"]))
+    else:
+        mcq_records = []
+
+    if freeform_items:
+        freeform_dir = work_dir / "02_cot_freeform_solve"
+        freeform_summary = run_inference(
+            data_path=freeform_data,
+            output_csv=freeform_dir / "solve_freeform.csv",
+            work_dir=freeform_dir,
+            model=model,
+            repair_model=model,
+            backend=backend,
+            gpu_id=gpu_id,
+            base_max_tokens=16384,
+            base_max_model_len=32768,
+            prompt_style="cot",
+            temperature=0.6,
+            seed=seed,
+            disable_thinking=False,
+            batch_size=batch_size,
+            vllm_batch_size=vllm_batch_size,
+            vllm_enforce_eager=vllm_enforce_eager,
+            self_consistency_n=1,
+            model_postprocess=True,
+            legal_postprocess_modes="solve",
+            repair_max_tokens=3072,
+            repair_max_model_len=16384,
+            repair_base_tail_chars=2400,
+            repair_disable_thinking=True,
+            resume=resume,
+            reuse_existing=reuse_existing,
+            pipeline="single_model",
+            repair_batch_size=repair_batch_size,
+        )
+        stage_summaries["cot_freeform_solve"] = freeform_summary
+        stage_outputs["cot_freeform_solve"] = freeform_summary["results_jsonl"]
+        freeform_records = _load_jsonl_records(Path(freeform_summary["results_jsonl"]))
+    else:
+        freeform_records = []
+
+    merged_jsonl = work_dir / "03_fixed_row_type_merge.jsonl"
+    merged_records = _merge_row_type_outputs(
+        items,
+        mcq_records,
+        freeform_records,
+        merged_jsonl,
+        "base_multipass_route_compact_mcq_solve_freeform",
+    )
+    final_records, safe_cleanup_changed = _apply_safe_final_string_cleanup(merged_records)
+    final_jsonl = work_dir / "04_final_model_only_multipass.jsonl"
+    _write_jsonl_records(final_jsonl, final_records)
+    sha256 = _write_submission_csv(output_csv, items, final_records)
+
+    summary = {
+        "pipeline": BASE_MULTIPASS_ROUTE_PRESET,
+        "submission_csv": str(output_csv),
+        "results_jsonl": str(final_jsonl),
+        "sha256": sha256,
+        "rows": len(final_records),
+        "expected_rows": len(items),
+        "mcq_rows": len(mcq_items),
+        "freeform_rows": len(freeform_items),
+        "ids_match": [int(row["id"]) for row in final_records] == [int(item["id"]) for item in items],
+        "blank_responses": sum(1 for row in final_records if not str(row.get("response", "")).strip()),
+        "safe_cleanup_changed": safe_cleanup_changed,
+        "model": model,
+        "backend": backend,
+        "stage_outputs": stage_outputs,
+        "stage_summaries": stage_summaries,
+        "fixed_routing": {
+            "mcq": "compact_boxed Qwen generation plus Qwen structured boxed pass",
+            "freeform": "16k cot Qwen generation plus Qwen solve boxed pass",
+        },
+        "generation_parameters": {
+            "temperature": 0.6,
+            "seed": seed,
+            "base_max_tokens": 16384,
+            "base_max_model_len": 32768,
+            "mcq_prompt_style": "compact_boxed",
+            "freeform_prompt_style": "cot",
+            "mcq_postprocess": "structured",
+            "freeform_postprocess": "solve",
+            "mcq_repair_max_tokens": 512,
+            "freeform_repair_max_tokens": 3072,
+            "self_consistency_n": 1,
+        },
+        "legal_surface": (
+            "All answer-changing stages are local Qwen/Qwen3-4B-Thinking-2507 "
+            "model generations. The non-model code only writes subset files, "
+            "merges fixed row types, trims response strings, repairs simple "
+            "LaTeX wrappers, and writes CSV/JSONL artifacts."
+        ),
+        "cached_answer_inputs": "none",
+    }
+    summary_path = work_dir / "base_multipass_route_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(json.dumps(summary, indent=2), flush=True)
+    return summary
 
 
 def _run_tuned_hybrid_pipeline(
@@ -1197,6 +1382,30 @@ def run_inference(
 
     The output CSV contains the final model responses in input id order.
     """
+    if pipeline == BASE_MULTIPASS_ROUTE_PRESET:
+        if self_consistency_n != 1:
+            raise ValueError("base_multipass_route requires self_consistency_n=1")
+        if model_postprocess:
+            raise ValueError(
+                "base_multipass_route owns its internal model postprocess stages; "
+                "call it with model_postprocess=False."
+            )
+        return _run_base_multipass_route_pipeline(
+            data_path=Path(data_path),
+            output_csv=Path(output_csv),
+            work_dir=Path(work_dir),
+            model=model,
+            backend=backend,
+            gpu_id=gpu_id,
+            seed=seed,
+            batch_size=batch_size,
+            vllm_batch_size=vllm_batch_size,
+            vllm_enforce_eager=vllm_enforce_eager,
+            repair_batch_size=repair_batch_size,
+            resume=resume,
+            reuse_existing=reuse_existing,
+        )
+
     if pipeline == RAW_DUAL_CHOOSE_PRESET:
         if self_consistency_n != 1:
             raise ValueError("raw_dual_choose requires self_consistency_n=1")
@@ -1387,7 +1596,8 @@ def run_inference(
     if pipeline != "single_model":
         raise ValueError(
             f"Unknown pipeline {pipeline!r}. Use {TUNED_HYBRID_PRESET!r} "
-            f"or {RAW_DUAL_CHOOSE_PRESET!r} for optional experiments, "
+            f"{RAW_DUAL_CHOOSE_PRESET!r}, or {BASE_MULTIPASS_ROUTE_PRESET!r} "
+            "for optional experiments, "
             "or 'single_model' for the raw one-model path."
         )
 

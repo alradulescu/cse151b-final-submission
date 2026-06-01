@@ -116,9 +116,13 @@ run_inference(
 PY
 ```
 
-## Backup Multipass Route
+## Optional Multipass Backup
 
-The backup route now lives on the public branch:
+This repository also includes an optional base-model multipass route. The
+primary/default route above remains the raw 16k Qwen path; use this section only
+when you want to run the backup route.
+
+The same code is also available on the public branch:
 
 ```text
 base-multipass-route
@@ -128,14 +132,7 @@ This backup does not require adapter weights. It uses only the required base
 model, `Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside
 one `run_inference()` call.
 
-To inspect or run that branch:
-
-```bash
-git fetch origin base-multipass-route
-git checkout base-multipass-route
-```
-
-Then run:
+Run the backup route from this branch with:
 
 ```bash
 python3 scripts/run_base_multipass_route.py \
@@ -155,3 +152,8 @@ The `base-multipass-route` branch performs:
 
 The non-model code only writes temporary JSONL/CSV files, performs fixed
 row-type routing, trims response strings, and repairs simple LaTeX wrappers.
+
+To make this route the default later, change the default runner/README command
+from `scripts/run_raw_qwen16k_primary.py` to
+`scripts/run_base_multipass_route.py`, or call `run_inference()` with
+`pipeline="base_multipass_route"`.
