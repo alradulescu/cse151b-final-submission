@@ -72,7 +72,7 @@ vllm_batch_size: 1024
 base_max_tokens: 16384
 base_max_model_len: 32768
 prompt_style: cot
-temperature: 0.7
+temperature: 0.6
 seed: 42
 model_postprocess: false
 ```

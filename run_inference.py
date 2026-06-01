@@ -1346,7 +1346,7 @@ def run_inference(
     base_max_tokens: int = 16384,
     base_max_model_len: int = 32768,
     prompt_style: str = "cot",
-    temperature: float = 0.7,
+    temperature: float = 0.6,
     seed: int = 42,
     disable_thinking: bool = False,
     batch_size: int = 4,
