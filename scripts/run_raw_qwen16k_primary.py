@@ -38,6 +38,7 @@ def main() -> int:
         pipeline=cfg["pipeline"],
         backend=args.backend or cfg["backend"],
         gpu_id=args.gpu_id,
+        vllm_batch_size=int(cfg.get("vllm_batch_size", 1024)),
         base_max_tokens=int(cfg["base_max_tokens"]),
         base_max_model_len=int(cfg["base_max_model_len"]),
         vllm_enforce_eager=bool(cfg.get("vllm_enforce_eager", True)),

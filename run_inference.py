@@ -1646,7 +1646,7 @@ def main():
     parser.add_argument("--vllm-quantization", default="bitsandbytes",
                         choices=["none", "bitsandbytes", "awq", "gptq"],
                         help="vLLM quantization mode. Use 'none' on larger GPUs.")
-    parser.add_argument("--vllm-batch-size", type=int, default=128,
+    parser.add_argument("--vllm-batch-size", type=int, default=1024,
                         help="Number of prompts to send to vLLM per checkpointed chunk.")
     parser.add_argument("--vllm-max-num-seqs", type=int, default=256,
                         help="vLLM max_num_seqs engine setting.")

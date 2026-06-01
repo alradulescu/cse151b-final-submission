@@ -4,6 +4,7 @@
   "model": "Qwen/Qwen3-4B-Thinking-2507",
   "pipeline": "single_model",
   "backend": "vllm",
+  "vllm_batch_size": 1024,
   "base_max_tokens": 16384,
   "base_max_model_len": 32768,
   "vllm_enforce_eager": true,

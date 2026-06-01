@@ -68,6 +68,7 @@ Pinned default settings:
 ```text
 backend: vLLM
 vllm_enforce_eager: true
+vllm_batch_size: 1024
 base_max_tokens: 16384
 base_max_model_len: 32768
 prompt_style: cot
