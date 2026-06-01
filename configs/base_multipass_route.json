@@ -1,0 +1,11 @@
+{
+  "model": "Qwen/Qwen3-4B-Thinking-2507",
+  "pipeline": "base_multipass_route",
+  "backend": "vllm",
+  "vllm_enforce_eager": true,
+  "vllm_batch_size": 1024,
+  "temperature": 0.6,
+  "seed": 42,
+  "self_consistency_n": 1,
+  "model_postprocess": false
+}

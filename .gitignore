@@ -60,6 +60,7 @@ utils.py
 scripts/*
 !scripts/run_raw_qwen16k_primary.py
 !scripts/run_repair_inference.py
+!scripts/run_base_multipass_route.py
 
 # Local dashboard runtime files
 status_dashboard/*.log

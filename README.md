@@ -85,6 +85,53 @@ are the configuration used for the submitted candidate.
 The code uses local model inference and standard CSV/file handling. It does not
 make external model calls or use tool-augmented generation at inference time.
 
+## Experimental Multipass Route
+
+This branch also includes a single-entry multipass route for testing a fixed
+row-type strategy. This route does not require or load fine-tuned adapters. It
+uses only the required base model:
+
+```text
+Qwen/Qwen3-4B-Thinking-2507
+```
+
+The route is exposed as `pipeline="base_multipass_route"` and performs all
+stages inside one `run_inference()` call:
+
+1. split the provided input rows by schema into multiple-choice and free-form
+   subsets;
+2. regenerate the multiple-choice path with compact boxed prompting followed by
+   a Qwen structured boxed pass;
+3. regenerate the free-form path with 16k CoT prompting followed by a Qwen solve
+   boxed pass;
+4. merge the two generated outputs by fixed row type and write the final CSV.
+
+It generates every answer-changing stage from the provided input rows. The
+non-model code only writes temporary subset JSONL files, merges fixed row types,
+does response-string trimming/LaTeX wrapper cleanup, and writes CSV/JSONL files.
+
+Run it with:
+
+```bash
+python3 scripts/run_base_multipass_route.py \
+  --data kaggle_data/private.jsonl \
+  --output submission.csv \
+  --work-dir results/base_multipass_route
+```
+
+Equivalent Python call:
+
+```python
+from run_inference import run_inference
+
+run_inference(
+    data_path="kaggle_data/private.jsonl",
+    output_csv="submission.csv",
+    work_dir="results/base_multipass_route",
+    pipeline="base_multipass_route",
+)
+```
+
 ## Environment Setup
 
 Use a CUDA-capable Linux GPU environment. The final generation runs used an AWS
@@ -115,43 +162,3 @@ run_inference(
 )
 PY
 ```
-
-## Secondary Tuned Route
-
-The repository also keeps a secondary tuned route. It is not the default
-pipeline. To run it, set the adapter locations and call
-`pipeline="tuned_hybrid"`.
-
-Adapter variables:
-
-```bash
-export CSE151B_SELECTOR_ALL_REPAIR_MODEL=<hf-adapter-repo-for-selector-all>
-export CSE151B_SELECTOR_FREEFORM_REPAIR_MODEL=<hf-adapter-repo-for-selector-freeform>
-export CSE151B_MCQ_REPAIR_MODEL=<hf-adapter-repo-for-mcq>
-export CSE151B_FREEFORM_STRUCTURED_MODEL=<hf-adapter-repo-for-freeform-structured>
-```
-
-Pass names:
-
-```text
-selector_all_repair
-selector_freeform_repair
-mcq_repair
-freeform_structured
-```
-
-Example:
-
-```python
-from run_inference import run_inference
-
-run_inference(
-    data_path="kaggle_data/private.jsonl",
-    output_csv="submission_tuned.csv",
-    work_dir="results/tuned_route",
-    pipeline="tuned_hybrid",
-    hybrid_final_policy="full",
-)
-```
-
-For the lighter selector-only variant, use `hybrid_final_policy="selector"`.
