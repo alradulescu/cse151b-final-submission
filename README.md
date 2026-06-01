@@ -132,6 +132,21 @@ This backup does not require adapter weights. It uses only the required base
 model, `Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside
 one `run_inference()` call.
 
+With the settings below, full private-set generation for this route is expected
+to take about `6 hours` on an AWS `g6e.12xlarge` using four NVIDIA L40S GPUs.
+
+```text
+backend: vLLM
+model: Qwen/Qwen3-4B-Thinking-2507
+temperature: 0.6
+seed: 42
+vllm_batch_size: 1024
+vllm_enforce_eager: true
+self_consistency_n: 1
+mcq pass: compact_boxed generation plus Qwen structured boxed pass
+freeform pass: 16k CoT generation plus Qwen solve boxed pass
+```
+
 Run the backup route from this branch with:
 
 ```bash
