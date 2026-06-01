@@ -1,0 +1,22 @@
+{
+  "name": "raw_qwen16k_primary",
+  "purpose": "Raw Qwen generation path with a 16k-token generation budget.",
+  "model": "Qwen/Qwen3-4B-Thinking-2507",
+  "pipeline": "single_model",
+  "backend": "vllm",
+  "base_max_tokens": 16384,
+  "base_max_model_len": 32768,
+  "vllm_enforce_eager": true,
+  "prompt_style": "cot",
+  "temperature": 0.6,
+  "seed": 42,
+  "disable_thinking": false,
+  "self_consistency_n": 1,
+  "model_postprocess": false,
+  "csv_handling": [
+    "id,response CSV packaging",
+    "row-order preservation",
+    "whitespace-safe serialization"
+  ],
+  "inference_mode": "local Qwen model generation plus CSV serialization"
+}

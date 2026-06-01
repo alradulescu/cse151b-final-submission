@@ -1,0 +1,82 @@
+.claude
+.venv
+__pycache__
+
+# Local datasets and generated outputs.
+models/
+results/
+artifacts/
+aws/
+*.csv
+*.jsonl
+*.log
+*.pid
+*.tmp
+
+# Keep only explicitly tracked configs.
+!data/
+!kaggle_data/
+!configs/
+!configs/*.json
+
+# Never publish private competition data or generated submissions.
+kaggle_data/private.jsonl
+data/private.jsonl
+submission*.csv
+results_backup.jsonl
+baseline_run.jsonl
+awscliv2.zip
+qwen_unified.aws_snapshot.py
+
+# Historical/research files intentionally absent from the public submission
+# branch. They remain local only if present in the working tree.
+AGENTS.md
+AUTORESEARCH_CSE151B.md
+AWS_SUPPORT_POLICY.md
+CLAUDE.md
+DECISIONS.md
+HANDOFF.md
+KAGGLE_SUBMISSION_POLICY.md
+checklist.tex
+milestone_report.*
+neurips_2026.sty
+*.ipynb
+*.png
+*.pdf
+status_dashboard/
+finetune_lora.py
+go.sh
+launch_pod.sh
+make_submission.py
+modal_app.py
+rescore.py
+run_aws_final.sh
+run_pipeline.sh
+setup_aws_gpu.sh
+setup_dsmlp.sh
+sync_to_dsmlp.sh
+test_judger*.py
+utils.py
+scripts/*
+!scripts/run_raw_qwen16k_primary.py
+!scripts/run_repair_inference.py
+
+# Local dashboard runtime files
+status_dashboard/*.log
+status_dashboard/*.pid
+status_dashboard/*.typescript
+
+# Generated no-submit analysis artifacts; keep durable reports/scripts instead.
+artifacts/no_gpu_postprocess_20260525/*.jsonl
+artifacts/no_gpu_postprocess_20260525/*.csv
+artifacts/focused_top10_v2_20260525_0700_remote/
+artifacts/
+
+# Local AWS/helper downloads and generated smoke artifacts.
+artifacts/final_entrypoint_cached_smoke_20260531/
+artifacts/legal_multistage_fix_smoke_20260531/
+artifacts/legal_multistage_smoke_20260531/
+artifacts/legal_specialized_oldfix_smoke_20260531/
+artifacts/legal_specialized_v2_oldfix_smoke_20260531/
+artifacts/legal_specialized_v3_public_cal_smoke_20260531/
+artifacts/unified_qwen_workflow_20260531_gpu2/
