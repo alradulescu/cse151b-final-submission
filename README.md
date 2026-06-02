@@ -116,11 +116,11 @@ run_inference(
 PY
 ```
 
-## Optional Multipass Backup
+## Multipass Route
 
-This repository also includes an optional base-model multipass route. The
-primary/default route above remains the raw 16k Qwen path; use this section only
-when you want to run the backup route.
+This repository also includes a base-model multipass route. The primary/default
+route above remains the raw 16k Qwen path; use this section to run the
+multipass route.
 
 The same code is also available on the public branch:
 
@@ -128,16 +128,16 @@ The same code is also available on the public branch:
 base-multipass-route
 ```
 
-This route was originally listed as a backup while we were still validating its
-reproducibility. A later diagnostic leaderboard run of this public-repo route
-produced the higher score among the fresh base-model fallback paths we tested.
+This route produced the higher leaderboard score in a diagnostic run of the
+public-repo pipeline.
 
 It does not require adapter weights. It uses only the required base model,
 `Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside one
 `run_inference()` call.
 
 With the settings below, full private-set generation for this route is expected
-to take about `6 hours` on an AWS `g6e.12xlarge` using four NVIDIA L40S GPUs.
+to take about `6 hours` on an AWS `g6e.12xlarge` using four NVIDIA L40S GPUs,
+or about `24 hours` on one NVIDIA L40S GPU.
 
 ```text
 backend: vLLM
@@ -151,7 +151,7 @@ mcq pass: compact_boxed generation plus Qwen structured boxed pass
 freeform pass: 16k CoT generation plus Qwen solve boxed pass
 ```
 
-Run the backup route from this branch with:
+Run the multipass route with:
 
 ```bash
 python3 scripts/run_base_multipass_route.py \
@@ -172,7 +172,5 @@ The `base-multipass-route` branch performs:
 The non-model code only writes temporary JSONL/CSV files, performs fixed
 row-type routing, trims response strings, and repairs simple LaTeX wrappers.
 
-To make this route the default later, change the default runner/README command
-from `scripts/run_raw_qwen16k_primary.py` to
-`scripts/run_base_multipass_route.py`, or call `run_inference()` with
-`pipeline="base_multipass_route"`.
+You can also call this route directly with
+`run_inference(..., pipeline="base_multipass_route")`.
