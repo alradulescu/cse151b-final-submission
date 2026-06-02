@@ -130,8 +130,7 @@ base-multipass-route
 
 This route was originally listed as a backup while we were still validating its
 reproducibility. A later diagnostic leaderboard run of this public-repo route
-scored `0.667` public / `0.596` private, making it the stronger fresh
-base-model route among the fallback paths we tested.
+produced the higher score among the fresh base-model fallback paths we tested.
 
 It does not require adapter weights. It uses only the required base model,
 `Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside one
