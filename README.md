@@ -128,8 +128,8 @@ The same code is also available on the public branch:
 base-multipass-route
 ```
 
-This route produced the higher leaderboard score in a diagnostic run of the
-public-repo pipeline.
+This route produced the higher leaderboard score in the kaggle leaderboard,
+far higher time requirements due to the multiple passes.
 
 It does not require adapter weights. It uses only the required base model,
 `Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside one
