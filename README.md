@@ -128,9 +128,14 @@ The same code is also available on the public branch:
 base-multipass-route
 ```
 
-This backup does not require adapter weights. It uses only the required base
-model, `Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside
-one `run_inference()` call.
+This route was originally listed as a backup while we were still validating its
+reproducibility. A later diagnostic leaderboard run of this public-repo route
+scored `0.667` public / `0.596` private, making it the stronger fresh
+base-model route among the fallback paths we tested.
+
+It does not require adapter weights. It uses only the required base model,
+`Qwen/Qwen3-4B-Thinking-2507`, and runs all answer-changing stages inside one
+`run_inference()` call.
 
 With the settings below, full private-set generation for this route is expected
 to take about `6 hours` on an AWS `g6e.12xlarge` using four NVIDIA L40S GPUs.
